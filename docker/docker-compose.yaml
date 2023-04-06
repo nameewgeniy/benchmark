@@ -1,7 +1,121 @@
 version: "3"
 
+networks:
+    benchmark:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.17.0.0/16
+
+volumes:
+    kafka_data:
+    zookeeper_data:
+
 services: 
-    mongodb:
-        image: bitnami/mongodb
+    ########## KAFKA ##########
+
+    zookeeper:
+        image: docker.io/bitnami/zookeeper:3.8
         ports:
-            - "27017:27017"
+            - "2181:2181"
+        volumes:
+            - "zookeeper_data:/bitnami"
+        environment:
+            ALLOW_ANONYMOUS_LOGIN: 1
+        networks:
+            benchmark:
+                ipv4_address: 10.17.0.29
+
+    kafka:
+        image: docker.io/bitnami/kafka:3.1
+        ports:
+            - "9092:9092"
+            - "9093:9093"
+        volumes:
+            - "kafka_data:/bitnami"
+        environment:
+            KAFKA_CFG_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+            KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: 'CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT'
+            KAFKA_CFG_LISTENERS: 'CLIENT://:9092,EXTERNAL://:9093'
+            KAFKA_CFG_ADVERTISED_LISTENERS: 'CLIENT://kafka:9092,EXTERNAL://localhost:9093'
+            KAFKA_CFG_INTER_BROKER_LISTENER_NAME: 'CLIENT'
+            ALLOW_PLAINTEXT_LISTENER: 'yes'
+        depends_on:
+            - zookeeper
+        networks:
+            benchmark:
+                ipv4_address: 10.17.0.2
+
+    ########## TARANTOOL ##########
+
+    etcd:
+        image: 'bitnami/etcd:latest'
+        environment:
+            ETCD_ROOT_PASSWORD: password
+            ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+        ports:
+            - "2379:2379"
+            - "2380:2380"
+        networks:
+            benchmark:
+                ipv4_address: 10.17.0.4
+
+    ########## TARANTOOL ##########
+
+    tarantool:
+        image: tarantool/tarantool
+        environment:
+            TARANTOOL_USER_NAME: "user"
+            TARANTOOL_USER_PASSWORD: "password"
+            TARANTOOL_SYNC_TTL: "100" # секунды
+        ports:
+            - "3306:3301"
+        networks:
+            benchmark:
+                ipv4_address: 10.17.0.5
+
+
+    ########## MONGO ##########
+
+    mongodb:
+        image: mongo:5.0
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: user
+            MONGO_INITDB_ROOT_PASSWORD: password
+        ports:
+            - "27019:27017"
+        networks:
+            benchmark:
+                ipv4_address: 10.17.0.6
+
+    ########## CLICKHOUSE ##########
+
+    clickhouse:
+        image: yandex/clickhouse-server
+        environment:
+            CLICKHOUSE_USER: user
+            CLICKHOUSE_PASSWORD: password
+        ports:
+            - "9003:9000"
+            - "8126:8123"
+        networks:
+            benchmark:
+                ipv4_address: 10.17.0.7
+
+    ########## POSTGRES ##########
+
+    postgres:
+        image: wodby/postgres:13
+        stop_grace_period: 30s
+        environment:
+            POSTGRES_MAX_CONNECTIONS: 1000
+            POSTGRES_PASSWORD: password
+            POSTGRES_USER: user
+            POSTGRES_DB: db
+        ports:
+            - "5433:5432"
+        networks:
+            benchmark:
+                ipv4_address: 10.17.0.8
+
