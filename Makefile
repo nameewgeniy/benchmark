@@ -1,5 +1,5 @@
 bench:
-	@go test -bench=.
+	@go test -bench=. -tags musl,go_tarantool_ssl_disable
 	
 run:
 	@docker-compose -f docker/docker-compose.yaml up -d 
