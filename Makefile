@@ -1,5 +1,6 @@
 bench:
-	@go test -bench=. -tags musl,go_tarantool_ssl_disable
+	@go test -bench=. -benchmem -benchtime=1x -tags musl,go_tarantool_ssl_disable
+	# @benchstat /tmp/o
 	
 run:
 	@docker-compose -f docker/docker-compose.yaml up -d 
@@ -27,3 +28,7 @@ stop:
 
 down:
 	@docker-compose -f docker/docker-compose.yaml down
+
+benchstat:
+	@go get golang.org/x/perf/cmd/benchstat
+	@go install  golang.org/x/perf/cmd/benchstat
